@@ -2,142 +2,159 @@
 
 set -e
 
-ORG="Electronic Arts"
-OU="EA Secure"
-CA_NAME="EA Secure Certificate Authority"
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL="*"
 
-DAYS=3650
+echo " EA ProtoSSL Certificate"
+echo " Old ProtoSSL Bug Compatible"
+echo " gosredirector.ea.com"
 
-echo "===================================="
-echo " EA Multi Domain Certificate"
-echo "===================================="
-
-
-rm -rf crt
-mkdir crt
-
-cd crt
+DAYS=10000
 
 
-echo "[+] Generating Fake EA Root CA key"
+rm -rf certs
+mkdir certs
+cd certs
+
+echo "[+] Generating Equifax CA key"
 
 openssl genrsa \
-    -out ca.key \
-    1024
+-out equifax.key \
+1024
 
 
-echo "[+] Creating CA config"
-
-cat > ca.conf <<EOF
-[req]
-distinguished_name=req_dn
-x509_extensions=v3_ca
-
-[req_dn]
-
-[v3_ca]
-basicConstraints=critical,CA:true
-keyUsage=critical,keyCertSign,cRLSign
-subjectKeyIdentifier=hash
-authorityKeyIdentifier=keyid:always,issuer
-EOF
-
-
-echo "[+] Generating CA certificate"
+echo "[+] Creating CA"
 
 openssl req \
-    -x509 \
-    -new \
-    -nodes \
-    -key ca.key \
-    -sha256 \
-    -days $DAYS \
-    -out ca.pem \
-    -config ca.conf \
-    -subj "/C=US/O=$ORG/OU=$OU/CN=$CA_NAME"
-
-
+-new \
+-x509 \
+-md5 \
+-days $DAYS \
+-key equifax.key \
+-out equifax.crt \
+-subj "/C=US/O=Equifax/OU=Equifax Secure Certificate Authority/CN=Equifax Secure Certificate Authority"
 
 echo "[+] Generating server key"
 
 openssl genrsa \
-    -out privkey.pem \
-    1024
-
-echo "[+] Creating server config"
-
-cat > server.conf <<EOF
-[req]
-distinguished_name=req_dn
-req_extensions=req_ext
-
-[req_dn]
-
-[req_ext]
-subjectAltName=@alt_names
-
-[alt_names]
-DNS.1=gosredirector.ea.com
-DNS.2=bf4.gos.ea.com
-EOF
+-out gosredirector.key \
+1024
 
 echo "[+] Creating CSR"
 
 openssl req \
-    -new \
-    -key privkey.pem \
-    -out server.csr \
-    -config server.conf \
-    -subj "/C=US/O=$ORG/OU=$OU/CN=gosredirector.ea.com"
+-new \
+-md5 \
+-key gosredirector.key \
+-out gosredirector.csr \
+-subj "/C=US/ST=California/L=Redwood City/O=Electronic Arts, Inc./OU=Global Online Studio/CN=gosredirector.ea.com"
 
 echo "[+] Signing certificate"
 
+
 openssl x509 \
-    -req \
-    -in server.csr \
-    -CA ca.pem \
-    -CAkey ca.key \
-    -CAcreateserial \
-    -out server.pem \
-    -days $DAYS \
-    -sha256 \
-    -extfile server.conf \
-    -extensions req_ext
+-req \
+-md5 \
+-days $DAYS \
+-in gosredirector.csr \
+-CA equifax.crt \
+-CAkey equifax.key \
+-CAcreateserial \
+-out gosredirector.crt
 
-echo "[+] Creating chain"
+echo "[+] Export DER"
 
-cat server.pem ca.pem > fullchain.pem
 
-echo "[+] Verify"
-
-openssl verify \
-    -CAfile ca.pem \
-    server.pem
-
-echo
-echo "===================================="
-echo " Generated"
-echo "===================================="
-
-echo
-echo "CA:"
-echo " crt/ca.pem"
-
-echo
-echo "Server:"
-echo " crt/server.pem"
-
-echo
-echo "Key:"
-echo " crt/privkey.pem"
-
-echo
-echo "Chain:"
-echo " crt/fullchain.pem"
-
-echo
-echo "Check SAN:"
 openssl x509 \
-    -in server.pem \
-    -text \
-    -noout | grep DNS
+-in gosredirector.crt \
+-outform DER \
+-out gosredirector.der
+
+echo "[+] Patching ProtoSSL bug"
+
+
+Py3 <<'PY'
+
+data=open("gosredirector.der", "rb").read()
+
+old=bytes.fromhex("2a864886f70d010104")
+new=bytes.fromhex("2a864886f70d010101")
+
+positions=[]
+offset=0
+
+while True:
+    pos=data.find(old,offset)
+
+    if pos == -1:
+        break
+
+    positions.append(pos)
+    offset=pos+1
+
+print("Found:",positions)
+
+
+if len(positions)!=2: raise Exception("Expected exactly two MD5 identifiers")
+patch=positions[1]
+
+data=data[:patch]+new+data[patch+9:]
+
+open("gosredirector_mod.der", "wb").write(data)
+
+print("Patched:",hex(patch))
+
+PY
+
+
+echo "[+] Creating patched PEM"
+
+
+Py3 <<'PY'
+
+import base64
+import textwrap
+
+data=open("gosredirector_mod.der", "rb").read()
+
+
+b64=base64.b64encode(data).decode()
+
+with open("gosredirector_mod.pem", "w") as f:
+
+    f.write("-----BEGIN CERTIFICATE-----\n")
+
+    for line in textwrap.wrap(b64,64):
+        f.write(line+"\n")
+
+    f.write("-----END CERTIFICATE-----\n")
+
+PY
+
+echo "[+] Creating TLS chain"
+
+cat \
+gosredirector_mod.pem \
+equifax.crt \
+> server.pem
+
+
+echo "[+] Creating PFX"
+echo
+echo "CHECK PATCH"
+
+
+xxd -p gosredirector_mod.der \
+| tr -d '\n' \
+| grep -o "2a864886f70d0101[0-9a-f][0-9a-f]"
+
+
+
+echo
+echo "FILES"
+
+ls -lh
+
+
+echo
+echo "DONE"
