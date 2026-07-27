@@ -295,3 +295,19 @@ This project is for:
 This project is an independent implementation and is not affiliated with Electronic Arts.
 
 Battlefield and related trademarks belong to their respective owners.
+
+---
+
+## Project Status
+
+This project is currently a **Work In Progress (WIP)** and is not yet fully functional.
+
+The current version is provided **as-is** and should be considered experimental. At this stage, the emulator/server will not work correctly out of the box, as additional research and development is required.
+
+Some components are incomplete, unstable, or missing. Current development includes investigating network protocols, server behavior, and generating the required TLS certificates and configurations needed for compatibility with the original clients without modifying their binaries.
+
+Features may change, break, or be redesigned as development continues.
+
+This project is intended for research, preservation, and educational purposes.
+
+---
