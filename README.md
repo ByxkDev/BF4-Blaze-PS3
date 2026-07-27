@@ -323,3 +323,11 @@ Features may change, break, or be redesigned as development continues.
 This project is intended for research, preservation, and educational purposes.
 
 ---
+
+### Contributing / Helping
+
+If you are interested in helping with this project, feel free to contact me on Discord. (@Byxk)
+
+Any help with protocol research, testing, packet analysis, development, or documentation is appreciated.
+
+---
