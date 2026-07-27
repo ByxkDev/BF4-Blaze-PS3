@@ -266,7 +266,7 @@ BlazeEmu/
 - Go 1.20+
 - DNS server capable of custom records
 - Server/VPS running TCP and UDP ports
-- Battlefield 4 client
+- Battlefield 4 PS3 v1.20
 
 ---
 
