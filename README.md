@@ -130,7 +130,7 @@ Current flow:
 ```
 Client
  |
- | TCP connection
+TCP connection
  |
  v
 Blaze Parser
