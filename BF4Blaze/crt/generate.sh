@@ -11,7 +11,6 @@ echo " gosredirector.ea.com"
 
 DAYS=10000
 
-
 rm -rf certs
 mkdir certs
 cd certs
@@ -21,7 +20,6 @@ echo "[+] Generating Equifax CA key"
 openssl genrsa \
 -out equifax.key \
 1024
-
 
 echo "[+] Creating CA"
 
@@ -51,7 +49,6 @@ openssl req \
 
 echo "[+] Signing certificate"
 
-
 openssl x509 \
 -req \
 -md5 \
@@ -71,7 +68,6 @@ openssl x509 \
 -out gosredirector.der
 
 echo "[+] Patching ProtoSSL bug"
-
 
 Py3 <<'PY'
 
@@ -109,7 +105,6 @@ PY
 
 echo "[+] Creating patched PEM"
 
-
 Py3 <<'PY'
 
 import base64
@@ -143,18 +138,14 @@ echo "[+] Creating PFX"
 echo
 echo "CHECK PATCH"
 
-
 xxd -p gosredirector_mod.der \
 | tr -d '\n' \
 | grep -o "2a864886f70d0101[0-9a-f][0-9a-f]"
-
-
 
 echo
 echo "FILES"
 
 ls -lh
-
 
 echo
 echo "DONE"
