@@ -2,16 +2,7 @@
 
 set -e
 
-ORG="Electronic Arts"
-OU="EA Secure"
-CA_NAME="EA Secure Certificate Authority"
-
-DAYS=3650
-
-echo "===================================="
-echo " EA Multi Domain Certificate"
-echo "===================================="
-
+echo " GOS 2013 Certificate Generator"
 
 rm -rf crt
 mkdir crt
@@ -19,14 +10,23 @@ mkdir crt
 cd crt
 
 
-echo "[+] Generating Fake EA Root CA key"
+SHA="sha1"
+DAYS=7305
+
+
+CA_DN="/C=US/ST=California/L=Redwood City/O=Electronic Arts, Inc./OU=Global Online Studio/CN=GOS 2013 Certificate Authority/emailAddress=GOSDirtysockSupport@ea.com"
+
+SERVER_DN="/C=US/ST=California/L=Redwood City/O=Electronic Arts, Inc./OU=Global Online Studio/CN=gosredirector.ea.com/emailAddress=GOSDirtysockSupport@ea.com"
+
+echo "[+] Generate CA RSA 1024"
 
 openssl genrsa \
     -out ca.key \
     1024
 
 
-echo "[+] Creating CA config"
+
+echo "[+] Create CA config"
 
 cat > ca.conf <<EOF
 [req]
@@ -36,61 +36,62 @@ x509_extensions=v3_ca
 [req_dn]
 
 [v3_ca]
-basicConstraints=critical,CA:true
-keyUsage=critical,keyCertSign,cRLSign
-subjectKeyIdentifier=hash
-authorityKeyIdentifier=keyid:always,issuer
+basicConstraints=CA:true
+keyUsage=keyCertSign,cRLSign
 EOF
 
-
-echo "[+] Generating CA certificate"
+echo "[+] Generate CA certificate"
 
 openssl req \
     -x509 \
     -new \
     -nodes \
     -key ca.key \
-    -sha256 \
+    -sha1 \
     -days $DAYS \
     -out ca.pem \
-    -config ca.conf \
-    -subj "/C=US/O=$ORG/OU=$OU/CN=$CA_NAME"
+    -subj "$CA_DN" \
+    -config ca.conf
 
-
-
-echo "[+] Generating server key"
+echo "[+] Generate server RSA 1024"
 
 openssl genrsa \
-    -out privkey.pem \
+    -out gosredirector.ea.com-priv.pem \
     1024
 
-echo "[+] Creating server config"
+echo "[+] Create server config"
 
 cat > server.conf <<EOF
 [req]
 distinguished_name=req_dn
-req_extensions=req_ext
+req_extensions=v3_req
 
 [req_dn]
 
-[req_ext]
+[v3_req]
+
+keyUsage=digitalSignature,keyEncipherment
 subjectAltName=@alt_names
 
+
 [alt_names]
+
 DNS.1=gosredirector.ea.com
-DNS.2=bf4.gos.ea.com
+DNS.2=*.ea.com
+DNS.3=*.easports.com
+
 EOF
 
-echo "[+] Creating CSR"
+echo "[+] Generate CSR"
 
 openssl req \
     -new \
-    -key privkey.pem \
+    -key gosredirector.ea.com-priv.pem \
     -out server.csr \
     -config server.conf \
-    -subj "/C=US/O=$ORG/OU=$OU/CN=gosredirector.ea.com"
+    -subj "$SERVER_DN"
 
-echo "[+] Signing certificate"
+echo "[+] Sign server certificate"
 
 openssl x509 \
     -req \
@@ -98,46 +99,33 @@ openssl x509 \
     -CA ca.pem \
     -CAkey ca.key \
     -CAcreateserial \
-    -out server.pem \
+    -out gosredirector.ea.com-cert.pem \
     -days $DAYS \
-    -sha256 \
+    -sha1 \
     -extfile server.conf \
-    -extensions req_ext
+    -extensions v3_req
 
-echo "[+] Creating chain"
+echo "[+] Create chain"
 
-cat server.pem ca.pem > fullchain.pem
+cat gosredirector.ea.com-cert.pem ca.pem > fullchain.pem
 
 echo "[+] Verify"
 
 openssl verify \
     -CAfile ca.pem \
-    server.pem
+    gosredirector.ea.com-cert.pem
 
 echo
-echo "===================================="
-echo " Generated"
-echo "===================================="
+echo " DONE"
 
 echo
-echo "CA:"
-echo " crt/ca.pem"
+echo "Generated:"
+echo "gosredirector.ea.com-cert.pem"
+echo "gosredirector.ea.com-priv.pem"
+echo "ca.pem"
+echo "fullchain.pem"
 
-echo
-echo "Server:"
-echo " crt/server.pem"
-
-echo
-echo "Key:"
-echo " crt/privkey.pem"
-
-echo
-echo "Chain:"
-echo " crt/fullchain.pem"
-
-echo
-echo "Check SAN:"
 openssl x509 \
-    -in server.pem \
+    -in gosredirector.ea.com-cert.pem \
     -text \
-    -noout | grep DNS
+    -noout
