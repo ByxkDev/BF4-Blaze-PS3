@@ -27,7 +27,7 @@ Ciphers:
 2026/07/28 19:59:26 http: TLS handshake error EOF
 ```
 ---
-i haven't figured it out yet even with using the Bug_OldProtoSSL repo to patch the second instance of 2a864886f70d010104, this will still return the same error as above...
+i haven't figured it out yet even with using the Bug_OldProtoSSL repo to patch the second instance of 2a864886f70d010104, it will still return the same error as above...
 ---
 
 # Overview
