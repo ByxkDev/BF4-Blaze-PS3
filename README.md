@@ -112,7 +112,6 @@ The original game normally connects to the EA server:
 
 ```
 gosredirector.ea.com
-
 ```
 
 DNS response redirect this domain to the emulator server instead.
@@ -121,7 +120,6 @@ Example:
 
 ```
 gosredirector.ea.com  ->  151.xxx.xxx.xxx
-
 ```
 
 The client believes it is communicating with EA while all requests are handled locally.
