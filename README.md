@@ -14,6 +14,18 @@ At this point, the main goal is getting past the TLS handshake. Once the PS3 suc
 
 The TLS layer is currently the main blocker. After the handshake works, we can begin analyzing the requests the game sends and build the required Blaze services step by step.
 
+for now the generate.bat cert will show this in console: 
+```
+[TLS] ClientHello
+SNI:
+Ciphers:
+0x5 TLS_RSA_WITH_RC4_128_SHA
+0x4 0x0004
+0x2f TLS_RSA_WITH_AES_128_CBC_SHA
+0x35 TLS_RSA_WITH_AES_256_CBC_SHA
+2026/07/28 19:59:26 http: TLS handshake error EOF
+```
+i haven't figured it out yet even with using the Bug_OldProtoSSL repo to patch the second instance of 2a864886f70d010104, this will still return the same error as above :( 
 ---
 
 # Overview
