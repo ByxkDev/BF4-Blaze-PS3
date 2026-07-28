@@ -314,10 +314,8 @@ BlazeEmu/
 │   └── ...
 │
 ├── crt/
-│   ├── fullchain.pem
-│   └── privkey.pem
+│   └── generate.bat
 │
-├── generate.bat
 │
 └── main.go
 ```
