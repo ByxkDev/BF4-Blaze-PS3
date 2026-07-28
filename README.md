@@ -267,30 +267,6 @@ Before any Blaze communication begins, Battlefield 4 establishes an HTTPS connec
 
 The emulator includes tooling to generate a custom certificate chain attempting to match the behavior expected by the client.
 
-Certificate layout:
-
-```
-Fake EA Root CA
-
-        |
-        |
-
-gosredirector.ea.com
-bf4.gos.ea.com
-```
-
-The generated server certificate supports multiple EA domains using SAN entries:
-
-```
-Subject:
-CN=gosredirector.ea.com
-
-Subject Alternative Names:
-
-DNS:gosredirector.ea.com
-DNS:bf4.gos.ea.com
-```
-
 Current TLS compatibility remains under active investigation.
 
 ---
