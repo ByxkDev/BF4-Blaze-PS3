@@ -4,19 +4,29 @@
 ![Language](https://img.shields.io/badge/language-Go-blue)
 ![Platform](https://img.shields.io/badge/platform-PS3-lightgrey)
 
+---
+
 # ⚠️ Work In Progress
 
-This project is a **work in progress** implementation of a Battlefield 4 Blaze backend replacement.
+This project is an experimental implementation of a replacement backend for **Battlefield 4 (PlayStation 3)**.
 
-The goal is to recreate the required online services for legacy clients by implementing the server-side protocols and services while keeping the original game client untouched.
+The primary goal is to recreate EA's original online infrastructure so that the original game client can communicate with a custom server **without modifying the game executable**.
 
-At this point, the main goal is getting past the TLS handshake. Once the PS3 successfully establishes the HTTPS connection, we can start implementing the Blaze backend functionality.
+Development is currently focused on one major milestone:
 
-The TLS layer is currently the main blocker. After the handshake works, we can begin analyzing the requests the game sends and build the required Blaze services step by step.
+> **Successfully completing the TLS handshake.**
 
-for now after u generated the certificate using the generate.bat script, the cert will show this in console: 
+Once the PS3 client establishes a secure HTTPS connection, development can continue with implementing the Blaze backend, authentication, matchmaking, and the remaining online services.
 
-```
+At the moment, the TLS handshake is the primary blocker.
+
+---
+
+# Current TLS Status
+
+After generating the certificates using the included `generate.bat` script, the server currently receives the following output:
+
+```text
 [TLS] ClientHello
 SNI:
 Ciphers:
@@ -27,42 +37,72 @@ Ciphers:
 2026/07/28 19:59:26 http: TLS handshake error EOF
 ```
 
-i haven't figured it out yet even with using the Bug_OldProtoSSL repo to patch the second instance of 2a864886f70d010104, it will still return the same error as above...
+This confirms that:
 
+- The PS3 successfully connects to the server.
+- The TLS ClientHello is received.
+- The client advertises legacy RSA cipher suites.
+- The client immediately aborts the handshake before completion.
+
+At the moment, the exact reason for the disconnect has not yet been identified.
+
+Research currently includes:
+
+- Legacy EA ProtoSSL behavior
+- Certificate chain compatibility
+- Signature algorithm compatibility
+- Legacy RSA cipher suites
+- TLS version compatibility
+- Differences between OpenSSL and EA's ProtoSSL implementation
+
+The repository also contains tooling to generate certificates that resemble EA's certificate chain.
+
+Even after applying the known **Bug_OldProtoSSL** patch (replacing the second occurrence of `2a864886f70d010104`), Battlefield 4 PS3 v1.20 still terminates the handshake with the same EOF error.
+
+Until the TLS handshake completes successfully, no HTTPS requests are exchanged, preventing further implementation of the Blaze backend.
+
+---
 
 # Overview
 
-BF4 originally relied on EA's backend infrastructure for:
+Battlefield 4 originally relied on numerous EA backend services, including:
 
 - Authentication
-- Server discovery
 - Redirect services
 - Blaze RPC communication
-- Multiplayer sessions
-- Presence
+- Server discovery
 - Matchmaking
+- Presence
+- Multiplayer sessions
 - Game reporting
 
-This project provides a custom backend implementation that recreates these services locally.
+This project aims to recreate those services locally while preserving compatibility with the original PlayStation 3 client.
 
-The client is redirected using **DNS control**, allowing the original game executable to communicate with the replacement server without modifying the game binary.
+The client is redirected through **DNS control**, allowing all traffic to be handled by the emulator instead of EA's original infrastructure.
 
 ---
 
 # Features
 
-## Implemented
+## Currently Implemented
 
-✅ Custom Blaze TCP server  
-✅ Blaze packet parsing  
-✅ TDF structure parsing  
-✅ Component based request handling  
-✅ UDP service listeners  
-✅ HTTP service endpoint  
-✅ HTTPS/TLS service support  
-✅ Custom certificate handling  
-✅ DNS based service redirection  
-✅ Multi-service EA endpoint emulation  
+- ✅ Custom Blaze TCP server
+- ✅ Blaze packet parsing
+- ✅ TDF structure parsing
+- ✅ Component-based request handling
+- ✅ UDP service listeners
+- ✅ HTTP service endpoint
+- ✅ HTTPS listener
+- ✅ Custom certificate generation
+- ✅ DNS-based service redirection
+- ✅ Multi-service EA endpoint emulation
+- ✅ TLS ClientHello inspection
+
+## Currently In Progress
+
+- ⏳ Legacy ProtoSSL compatibility
+- ⏳ TLS handshake completion
+- ⏳ HTTPS request analysis
 
 ---
 
@@ -77,37 +117,37 @@ The client is redirected using **DNS control**, allowing the original game execu
                        |
                        |
         +--------------+--------------+
-        |
-        v
- gosredirector.ea.com
- bf4.gos.ea.com
-        |
-        |
-        v
-BF4 Blaze Emulator
-        |
-        |
- +------+-------+
- |              |
- v              v
-Blaze TCP     UDP Services
-42130         Game Services
-42131
-
+        |                             |
+        v                             v
+ gosredirector.ea.com          bf4.gos.ea.com
+        |                             |
+        +--------------+--------------+
+                       |
+                       v
+              BF4 Blaze Emulator
+                       |
+          +------------+------------+
+          |                         |
+          v                         v
+     Blaze TCP                 UDP Services
+     42130                     25100
+     42131                     25101
+                               25102
+                               25103
 ```
 
 ---
 
 # DNS Redirection
 
-The client normally connects to EA infrastructure:
+The original game normally connects to EA servers:
 
 ```
 gosredirector.ea.com
 bf4.gos.ea.com
 ```
 
-Instead of changing the game executable, DNS responses redirect these domains to the emulator server.
+DNS responses redirect those domains to the emulator server instead.
 
 Example:
 
@@ -116,57 +156,59 @@ gosredirector.ea.com  ->  151.xxx.xxx.xxx
 bf4.gos.ea.com        ->  151.xxx.xxx.xxx
 ```
 
-The client believes it is communicating with the original backend while requests are handled by this server.
+The client believes it is communicating with EA while all requests are handled locally.
 
 ---
 
 # No Client Binary Modification
 
-One of the main goals of this project is:
+One of the primary goals of this project is preserving compatibility with the original game.
 
-- No modified executable
-- No patched game files
-- No altered network code
+The emulator does **not** require:
 
-The original client is used as-is.
+- Modified EBOOT files
+- Patched executables
+- Altered game assets
+- Custom network libraries
 
-All compatibility work happens on the server side through:
+Instead, compatibility is achieved through:
 
+- DNS redirection
 - Protocol recreation
-- Packet handling
-- DNS routing
-- TLS compatibility
+- Packet parsing
+- Blaze implementation
+- TLS compatibility research
 
 ---
 
 # Blaze Protocol
 
-The server implements parts of EA's Blaze networking protocol.
+The emulator implements portions of EA's Blaze networking protocol.
 
-Current flow:
+Current packet flow:
 
 ```
 Client
- |
-TCP connection
- |
- v
+   |
+TCP Connection
+   |
+   v
 Blaze Parser
- |
- v
+   |
+   v
 Packet Decoder
- |
- v
+   |
+   v
 Component Handler
- |
- v
+   |
+   v
 Response Builder
- |
- v
+   |
+   v
 Client
 ```
 
-Example packet processing:
+Example:
 
 ```go
 packet := blaze.Parse(data)
@@ -189,13 +231,12 @@ Ports:
 42131
 ```
 
-Handles:
+Responsibilities:
 
-- Blaze RPC requests
-- Authentication flow
+- Blaze RPC
+- Authentication
 - Component communication
-- Session handling
-
+- Session management
 
 ---
 
@@ -210,21 +251,23 @@ Ports:
 25103
 ```
 
-Used for:
+Responsibilities:
 
+- Session traffic
 - Game traffic
-- Session communication
-- Real-time services
+- Real-time communication
 
 ---
 
-# TLS / ProtoSSL Compatibility
+# TLS / ProtoSSL Research
 
-Older EA clients use a legacy TLS implementation.
+Older EA titles use EA's proprietary **ProtoSSL** implementation.
 
-The emulator provides TLS endpoints compatible with older clients.
+Before any Blaze communication begins, Battlefield 4 establishes an HTTPS connection.
 
-Certificate handling includes:
+The emulator includes tooling to generate a custom certificate chain attempting to match the behavior expected by the client.
+
+Certificate layout:
 
 ```
 Fake EA Root CA
@@ -234,19 +277,21 @@ Fake EA Root CA
 
 gosredirector.ea.com
 bf4.gos.ea.com
-
 ```
 
-A single certificate can contain multiple EA service domains using SAN entries:
+The generated server certificate supports multiple EA domains using SAN entries:
 
 ```
 Subject:
 CN=gosredirector.ea.com
 
-SAN:
+Subject Alternative Names:
+
 DNS:gosredirector.ea.com
 DNS:bf4.gos.ea.com
 ```
+
+Current TLS compatibility remains under active investigation.
 
 ---
 
@@ -262,19 +307,19 @@ BlazeEmu/
 │
 ├── components/
 │   ├── authentication.go
-│   
-│   
+│   └── ...
 │
 ├── servers/
 │   ├── udp.go
-│   
+│   └── ...
 │
 ├── crt/
 │   ├── fullchain.pem
 │   └── privkey.pem
 │
+├── generate.bat
+│
 └── main.go
-
 ```
 
 ---
@@ -282,70 +327,140 @@ BlazeEmu/
 # Requirements
 
 - Go 1.20+
-- DNS server capable of custom records
-- Server/VPS running TCP and UDP ports
 - Battlefield 4 PS3 v1.20
+- DNS server capable of custom records
+- Server or VPS with TCP/UDP support
 
 ---
 
-## Not implemented yet
+# Current Roadmap
 
-- Full matchmaking replacement
-- Dedicated server integration
-- Complete statistics backend
-- All Blaze components
+1. Complete TLS handshake.
+2. Capture the first HTTPS requests.
+3. Implement GOS Redirector.
+4. Implement Blaze authentication.
+5. Implement session management.
+6. Implement matchmaking.
+7. Implement presence.
+8. Implement game reporting.
+9. Continue protocol reverse engineering.
+
+---
+
+# Not Yet Implemented
+
+- Full matchmaking
+- Presence system
+- Dedicated server backend
+- Statistics backend
+- Leaderboards
+- Friends
+- Clubs
+- Complete Blaze components
+- Full redirector implementation
 
 ---
 
 # Purpose
 
-This project is for:
+This project exists for:
 
-- Game preservation research
+- Game preservation
+- Reverse engineering research
 - Network protocol research
 - Learning about legacy online architectures
-- Understanding Blaze server communication
+- Educational purposes
+
+Its goal is to better understand EA's original Battlefield 4 backend while developing a compatible replacement implementation.
 
 ---
 
-## Client Analysis
+# Client Analysis
 
-This project uses extracted data from the original client binary for research purposes.
+Development relies heavily on information extracted from the original Battlefield 4 PlayStation 3 client.
 
-A `strings.txt` file is generated by dumping readable strings from the `EBOOT.ELF` binary. These strings help identify domains, endpoints, service names, protocol references, and other information that the client uses during communication.
+A `strings.txt` file is generated by dumping readable strings from the original `EBOOT.ELF`.
 
-By analyzing these strings together with network captures and server logs, we can better understand what requests the client makes and what services it expects to communicate with.
+These strings help identify:
 
-This information is used to assist development of the emulator/server implementation and improve compatibility with the original client behavior.
+- Domains
+- URLs
+- Blaze components
+- Service names
+- Redirect endpoints
+- Internal protocol identifiers
+
+Combined with packet captures, TLS debugging, and server logs, this information helps reconstruct the behavior expected by the original client.
+
+---
+
+# Project Status
+
+| Component | Status |
+|------------|--------|
+| DNS Redirection | ✅ Working |
+| HTTP Server | ✅ Working |
+| HTTPS Listener | ✅ Working |
+| Blaze TCP Listener | ✅ Working |
+| UDP Services | ✅ Working |
+| Blaze Packet Parser | ✅ Working |
+| TDF Parser | ✅ Working |
+| TLS ClientHello Reception | ✅ Working |
+| TLS Handshake Completion | ❌ Not Yet |
+| HTTPS Request Processing | ❌ Not Yet |
+| Blaze Authentication | ⏳ Planned |
+| Matchmaking | ⏳ Planned |
+| Presence | ⏳ Planned |
+| Game Reporting | ⏳ Planned |
 
 ---
 
 # Disclaimer
 
-This project is an independent implementation and is not affiliated with Electronic Arts.
+This project is an independent implementation created for research and preservation purposes.
 
-Battlefield and related trademarks belong to their respective owners.
+It is **not affiliated with, endorsed by, or associated with Electronic Arts or DICE**.
 
----
-
-## Project Status
-
-This project is currently a **Work In Progress (WIP)** and is not yet fully functional.
-
-The current version is provided **as-is** and should be considered experimental. At this stage, the emulator/server will not work correctly out of the box, as additional research and development is required.
-
-Some components are incomplete, unstable, or missing. Current development includes investigating network protocols, server behavior, and generating the required TLS certificates and configurations needed for compatibility with the original clients without modifying their binaries.
-
-Features may change, break, or be redesigned as development continues.
-
-This project is intended for research, preservation, and educational purposes.
+Battlefield and all related trademarks are the property of their respective owners.
 
 ---
 
-### Contributing / Helping
+# Contributing
 
-If you are interested in helping with this project, feel free to contact me on Discord. (@Byxk)
+Contributions are always welcome.
 
-Any help with protocol research, testing, packet analysis, development, or documentation is appreciated.
+If you are interested in helping with:
+
+- Blaze protocol research
+- Packet analysis
+- TLS compatibility
+- Reverse engineering
+- Development
+- Documentation
+- Testing
+
+feel free to reach out on Discord:
+
+**@Byxk**
+
+Any assistance is greatly appreciated.
 
 ---
+
+# License
+
+This project is intended solely for:
+
+- Research
+- Education
+- Preservation
+
+No original EA server software is included.
+
+Only original source code written for this emulator is distributed.
+
+---
+
+**Current Development Focus**
+
+> Successfully completing the TLS handshake so the original Battlefield 4 PS3 client can begin exchanging HTTPS requests with the custom backend.
