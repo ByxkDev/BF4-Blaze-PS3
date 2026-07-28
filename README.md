@@ -14,7 +14,7 @@ At this point, the main goal is getting past the TLS handshake. Once the PS3 suc
 
 The TLS layer is currently the main blocker. After the handshake works, we can begin analyzing the requests the game sends and build the required Blaze services step by step.
 
-for now the generate.bat cert will show this in console: 
+for now after u generated the certificate using the generate.bat script, the cert will show this in console: 
 ```
 [TLS] ClientHello
 SNI:
