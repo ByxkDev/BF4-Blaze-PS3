@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set cdir=C:\Users\brams\OneDrive\Bureaublad\ssl-bf4
+set cdir=C:\ssl-bf4
 
 set ROOT=OTG3
 set GOS2011=GOS2011
