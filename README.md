@@ -10,6 +10,10 @@ This project is a **work in progress** implementation of a Battlefield 4 Blaze b
 
 The goal is to recreate the required online services for legacy clients by implementing the server-side protocols and services while keeping the original game client untouched.
 
+At this point, the main goal is getting past the TLS handshake. Once the PS3 successfully establishes the HTTPS connection, we can start implementing the Blaze backend functionality.
+
+The TLS layer is currently the main blocker. After the handshake works, we can begin analyzing the requests the game sends and build the required Blaze services step by step.
+
 ---
 
 # Overview
