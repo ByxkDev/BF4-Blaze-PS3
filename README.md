@@ -106,54 +106,22 @@ The client is redirected through **DNS control**, allowing all traffic to be han
 
 ---
 
-# Architecture
-
-```
-                Battlefield 4 Client
-                       |
-                       |
-                       v
-              Custom DNS Resolver
-                       |
-                       |
-        +--------------+--------------+
-        |                             |
-        v                             v
- gosredirector.ea.com          bf4.gos.ea.com
-        |                             |
-        +--------------+--------------+
-                       |
-                       v
-              BF4 Blaze Emulator
-                       |
-          +------------+------------+
-          |                         |
-          v                         v
-     Blaze TCP                 UDP Services
-     42130                     25100
-     42131                     25101
-                               25102
-                               25103
-```
-
----
-
 # DNS Redirection
 
-The original game normally connects to EA servers:
+The original game normally connects to the EA server:
 
 ```
 gosredirector.ea.com
-bf4.gos.ea.com
+
 ```
 
-DNS responses redirect those domains to the emulator server instead.
+DNS response redirect this domain to the emulator server instead.
 
 Example:
 
 ```
 gosredirector.ea.com  ->  151.xxx.xxx.xxx
-bf4.gos.ea.com        ->  151.xxx.xxx.xxx
+
 ```
 
 The client believes it is communicating with EA while all requests are handled locally.
